@@ -1,0 +1,30 @@
+<!DOCTYPE HTML><html>
+<head>
+  <title>Control de cambios via WiFi - Maqueta AMBA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="index.css">
+  <script src="index.js"></script>
+</head>
+<body>
+  <h2>Control de cambios via WiFi - Maqueta AMBA</h2><h2></h2>
+  <h4>Cambio Via 4 <-> Via 1 <span id=outputState></span></h4>
+  <label class=switch><input type=checkbox onchange=onToggle1(this) id=switch1 %STATE1%>
+  <span class=slider></span></label>
+  
+  <h4>Cambio Via 2 <> Via 1 <span id=outputState></span></h4>
+  <label class=switch><input type=checkbox onchange=onToggle2(this) id=switch2 %STATE2%>
+  <span class=slider></span></label>
+  
+  <h4>Cambio Via 2 <-> Via 3 <span id=outputState></span></h4>
+  <label class=switch><input type=checkbox onchange=onToggle3(this) id=switch3 %STATE3%>
+  <span class=slider></span></label>
+  
+  <h4>Cambio Via 3 <-> Via Muerta <span id=outputState></span></h4>
+  <label class=switch><input type=checkbox onchange=onToggle4(this) id=switch4 %STATE4%>
+  <span class=slider></span></label>
+  
+  <h4>Cambio Via 3 <-> Via 3 Viaducto <span id=outputState></span></h4>
+  <label class=switch><input type=checkbox onchange=onToggle5(this) id=switch5 %STATE5%>
+  <span class=slider></span></label>
+</body>
+</html>
