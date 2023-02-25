@@ -1,107 +1,67 @@
-/**
- * ----------------------------------------------------------------------------
- * ESP32 Remote Control with WebSocket
- * ----------------------------------------------------------------------------
- * © 2020 Stéphane Calderoni
- * ----------------------------------------------------------------------------
- */
-
 #include <Arduino.h>
 #include <FS.h>
+#include <ESP8266mDNS.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <Wire.h>
-#include <Adafruit_PWMServoDriver.h>
+#include <Adafruit_PWMServoDriver.h> 
+#include <buttonpush.h>
+#include <turnout.h>
+#include <iostream>
+#include <AsyncElegantOTA.h>
+//  #include <ArduinoOTA.h>
+
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 // ----------------------------------------------------------------------------
 // Definition of macros
 // ----------------------------------------------------------------------------
 
-#define LED_PIN   2
-#define BTN_PIN   5
 #define HTTP_PORT 80
+#define NUM_TURNOUTS 8
+#define STANDARD_DELAY 50
+#define NUM_BUTTON 6
 
 // ----------------------------------------------------------------------------
 // Definition of global constants
 // ----------------------------------------------------------------------------
 
-// Button debouncing
-const uint8_t DEBOUNCE_DELAY = 10; // in milliseconds
-
 // WiFi credentials
-const char *WIFI_SSID = "xxx";
-const char *WIFI_PASS = "xxx";
 
-// ----------------------------------------------------------------------------
-// Definition of the LED component
-// ----------------------------------------------------------------------------
-
-struct Led {
-    // state variables "Short Hand If...Else (Ternary Operator)" variable = (condition) ? expressionTrue : expressionFalse;
-    uint8_t pin;
-    bool    on;
-
-    // methods
-    void update() {
-        digitalWrite(pin, on ? HIGH : LOW);
-    }
-};
-
-// ----------------------------------------------------------------------------
-// Definition of the Button component
-// ----------------------------------------------------------------------------
-
-struct Button {
-    // state variables
-    uint8_t  pin;
-    bool     lastReading;
-    uint32_t lastDebounceTime;
-    uint16_t state;
-
-    // methods determining the logical state of the button
-    bool pressed()                { return state == 1; }
-    bool released()               { return state == 0xffff; }
-    bool held(uint16_t count = 0) { return state > 1 + count && state < 0xffff; }
-
-    // method for reading the physical state of the button
-    void read() {
-        // reads the voltage on the pin connected to the button
-        bool reading = digitalRead(pin);
-
-        // if the logic level has changed since the last reading,
-        // we reset the timer which counts down the necessary time
-        // beyond which we can consider that the bouncing effect
-        // has passed.
-        if (reading != lastReading) {
-            lastDebounceTime = millis();
-        }
-
-        // from the moment we're out of the bouncing phase
-        // the actual status of the button can be determined
-        if (millis() - lastDebounceTime > DEBOUNCE_DELAY) {
-            // don't forget that the read pin is pulled-up
-            bool pressed = reading == LOW;
-            if (pressed) {
-                     if (state  < 0xfffe) state++;
-                else if (state == 0xfffe) state = 2;
-            } else if (state) {
-                state = state == 0xffff ? 0 : 0xffff;
-            }
-        }
-
-        // finally, each new reading is saved
-        lastReading = reading;
-    }
-};
-
+const char *WIFI_SSID = "Valkyria_2.4";
+const char *WIFI_PASS = "Ev4.P3r0n.1778";
+const char* hostname = "ESP8266maq";
 // ----------------------------------------------------------------------------
 // Definition of global variables
 // ----------------------------------------------------------------------------
 
-Led    onboard_led = { LED_BUILTIN, false };
-Led    led         = { LED_PIN, false };
-Button button      = { BTN_PIN, HIGH, 0, 0 };
+TURNOUT_PARAMS tdef[NUM_TURNOUTS] = {
+ {0, 200, 215, ALIGN_MAIN, STANDARD_DELAY},
+ {1, 200, 215, ALIGN_MAIN, STANDARD_DELAY},
+ {2, 180, 215, ALIGN_MAIN, STANDARD_DELAY},
+ {3, 200, 228, ALIGN_MAIN, STANDARD_DELAY},
+ {4, 200, 228, ALIGN_MAIN, STANDARD_DELAY},
+ {5, 200, 228, ALIGN_MAIN, STANDARD_DELAY},
+ {6, 200, 228, ALIGN_MAIN, STANDARD_DELAY},
+ {7, 200, 228, ALIGN_MAIN, STANDARD_DELAY},
+
+
+
+ };
+
+BUTTON_PARAMS bdef[NUM_BUTTON] = {
+ {16, false, false, 0, 0, HIGH, 0, 0},
+ {13, false, true,  1, 2, HIGH, 0, 0},
+ {14, false, true,  3, 4, HIGH, 0, 0},
+ {12, false, false, 5, 0, HIGH, 0, 0},
+ {2,  false, false, 6, 0, HIGH, 0, 0},
+ {9,  false, false, 7, 0, HIGH, 0, 0},
+ };
+
+
+turnout *turnouts[NUM_TURNOUTS];
+Button *buTTon[NUM_BUTTON];
 
 AsyncWebServer server(HTTP_PORT);
 AsyncWebSocket ws("/ws");
@@ -113,10 +73,6 @@ AsyncWebSocket ws("/ws");
 void initSPIFFS() {
   if (!SPIFFS.begin()) {
     Serial.println("Cannot mount SPIFFS volume...");
-    while (1) {
-        onboard_led.on = millis() % 200 < 50;
-        onboard_led.update();
-    }
   }
 }
 
@@ -138,38 +94,9 @@ void initWiFi() {
 // ----------------------------------------------------------------------------
 // Web server initialization
 // ----------------------------------------------------------------------------
-// Pregunto si en el index.html existe las variables STATEn y por cada una que encuentro
-// voy preguntanto si el led esta encendido, caso positivo devuelvo la palabra checked
-// Esto hace que el response reemplace cada STATEn por el valor que le otorgo el if..
-// Si no encuentro ninguna devuelvo un string vacio String()
-
-String processor(const String &var) {
-     if(var == "STATE1"){
-       return String(led.on ? "checked" : "");
-     }
-     else if (var == "STATE2"){
-       return String(led.on ? "checked" : "");
-     } 
-     else if (var == "STATE3"){
-       return String(led.on ? "checked" : "");
-     } 
-     else if (var == "STATE4"){
-       return String(led.on ? "checked" : "");
-     } 
-     else if (var == "STATE5"){
-       return String(led.on ? "checked" : "");
-     } 
-     
-     return String();
-
-}
-
-// Aca devuelvo el archivo a cargar en cada reuqest GET, devuelvo que el mismo es tipo
-// text/html, el false te lo debo, y processor es lo explicado anteriormente. Es un template
-// para modificar el html
 
 void onRootRequest(AsyncWebServerRequest *request) {
-  request->send(SPIFFS, "/index.html", "text/html", false, processor);
+  request->send(SPIFFS, "/index.html", "text/html");
 }
 
 void initWebServer() {
@@ -178,19 +105,17 @@ void initWebServer() {
     server.begin();
 }
 
-// ----------------------------------------------------------------------------
-// WebSocket initialization
-// ----------------------------------------------------------------------------
-
-void notifyClients() {
-    const uint8_t size = JSON_OBJECT_SIZE(1);
+void notifyClients(int buttWeb) {
+    const uint8_t size = JSON_OBJECT_SIZE(2);
     StaticJsonDocument<size> json;
-    json["status"] = led.on ? "on" : "off";
-
-    char buffer[17];
+    char buttonJson = char(buttWeb);
+    json["status"] = "moving";
+    json["button"] = buttWeb;
+    char buffer[38];
     size_t len = serializeJson(json, buffer);
     ws.textAll(buffer, len);
 }
+
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
     AwsFrameInfo *info = (AwsFrameInfo*)arg;
@@ -204,12 +129,11 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             Serial.println(err.c_str());
             return;
         }
-
-        const char *action = json["action"];
         const char *button = json["button"];
-        if (strcmp(action, "toggle") == 0) {
-            led.on = !led.on;
-            notifyClients();
+        const char *pushed = json["pushed"];
+        int buttonNum = int(*button) - 48;
+        if (strcmp(pushed, "true") == 0) {
+            buTTon[buttonNum]->webPush = true; 
         }
 
     }
@@ -243,39 +167,94 @@ void initWebSocket() {
     server.addHandler(&ws);
 }
 
+void InitMDNS()
+{
+   if (!MDNS.begin(hostname)) 
+   {             
+     Serial.println("Error iniciando mDNS");
+   }
+   Serial.println("mDNS iniciado");
+}
+
+
+void setup() {
+//  ArduinoOTA.begin();
+
 // ----------------------------------------------------------------------------
 // Initialization
 // ----------------------------------------------------------------------------
 
-void setup() {
-    pinMode(onboard_led.pin, OUTPUT);
-    pinMode(led.pin,         OUTPUT);
-    pinMode(button.pin,      INPUT);
+  for (int i = 0; i < NUM_TURNOUTS; i++){ 
+    turnouts[i] = new turnout(&tdef[i]); 
+  }
 
-    Serial.begin(115200); delay(500);
+  for (int i = 0; i < NUM_TURNOUTS; i++){ 
+    turnouts[i]->initialize(); 
+  }
 
-    initSPIFFS();
-    initWiFi();
-    initWebSocket();
-    initWebServer();
+  for (int x = 0; x < NUM_BUTTON; x++){ 
+    buTTon[x] = new Button(&bdef[x]); 
+  }
+
+  for (int x = 0; x < NUM_BUTTON; x++){ 
+    pinMode(buTTon[x]->pin, INPUT_PULLUP); 
+  }
+
+  pwm.begin();
+  pwm.setPWMFreq(50); // Analog servos run at ~60 Hz updates
+  Serial.begin(115200); delay(500);
+  Serial.println("Comienzo a funcionar el sistema de Servos x ESP8266 y PCA9685");
+  
+
+  initSPIFFS();
+  initWiFi();
+  initWebSocket();
+  initWebServer();
+  InitMDNS();
+  AsyncElegantOTA.begin(&server);  
 }
 
-// ----------------------------------------------------------------------------
-// Main control loop
-// ----------------------------------------------------------------------------
-
 void loop() {
-    ws.cleanupClients();
+ws.cleanupClients();
+MDNS.update();
+// ArduinoOTA.handle(); 
 
-    button.read();
+unsigned long currentMilis = millis();
 
-    if (button.pressed()) {
-        led.on = !led.on;
-        notifyClients();
+
+// turnouts[0]->update(currentMilis);
+// turnouts[1]->update(currentMilis);
+for (int i = 0; i < NUM_TURNOUTS; i++){ 
+    turnouts[i]->update(currentMilis); 
     }
-    
-    onboard_led.on = millis() % 1000 < 50;
 
-    led.update();
-    onboard_led.update();
+for (int w = 0; w < NUM_BUTTON; w++) {
+      buTTon[w]->read();
+      if (buTTon[w]->pressed() || buTTon[w]->webPush == true ){
+        notifyClients(w);
+        Serial.println("Detecte un boton");
+        Serial.println(w, DEC);
+        buTTon[w]->webPush = false;
+        if (buTTon[w]->mgdServo() == true) {
+            Serial.println("Manejo mas de un servo");
+            int l = buTTon[w]->servoManaged1;
+            int v = buTTon[w]->servoManaged2;
+            Serial.println("Muevo los servos");
+            Serial.println(l, DEC);
+            Serial.println(v, DEC);
+            turnouts[l]->toggle();
+            turnouts[v]->toggle();
+        } else {
+          int n = buTTon[w]->servoManaged1;
+          Serial.println("Muevo el servo");
+          Serial.println(n, DEC);
+          turnouts[n]->toggle();
+        }    
+      }
+
+  }
+
+
+
+
 }
