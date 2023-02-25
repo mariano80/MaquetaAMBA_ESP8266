@@ -6,6 +6,7 @@
  * ----------------------------------------------------------------------------
  */
 
+// var gateway = `ws://${window.location.hostname}/ws`;
 var gateway = `ws://${window.location.hostname}/ws`;
 var websocket;
 
@@ -17,7 +18,7 @@ window.addEventListener('load', onLoad);
 
 function onLoad(event) {
     initWebSocket();
-    initButton();
+//    initButton();
 }
 
 // ----------------------------------------------------------------------------
@@ -30,6 +31,7 @@ function initWebSocket() {
     websocket.onopen    = onOpen;
     websocket.onclose   = onClose;
     websocket.onmessage = onMessage;
+
 }
 
 function onOpen(event) {
@@ -43,37 +45,46 @@ function onClose(event) {
 
 function onMessage(event) {
     let data = JSON.parse(event.data);
-    document.getElementById('led').className = data.status;
+    toggleSequence(data.button);
+    console.log(data.button);
+    console.log(data.status);
+
 }
 
-// ----------------------------------------------------------------------------
-// Button handling
-// ----------------------------------------------------------------------------
-
-function initButton() {
-    document.getElementById('switch1').addEventListener('click', onToggle1);
-    document.getElementById('switch2').addEventListener('click', onToggle2);
-    document.getElementById('switch3').addEventListener('click', onToggle3);
-    document.getElementById('switch4').addEventListener('click', onToggle4);
-    document.getElementById('switch5').addEventListener('click', onToggle5);
+function toggleSequence(p1) {
+    setTimeout(() => {
+       document.getElementById(p1).classList.toggle('buttonPush');
+    }, 20)
+    setTimeout(() => {
+        document.getElementById(p1).classList.remove('buttonPush');
+     }, 2000)
 }
 
 function onToggle1(event) {
-    websocket.send(JSON.stringify({'action':'toggle', 'button' : '1'}));
+    websocket.send(JSON.stringify({'pushed':'true', 'button' : '0'}));
 }
 
 function onToggle2(event) {
-    websocket.send(JSON.stringify({'action':'toggle', 'button' : '2'}));
+    websocket.send(JSON.stringify({'pushed':'true', 'button' : '1'}));
 }
 
 function onToggle3(event) {
-    websocket.send(JSON.stringify({'action':'toggle', 'button' : '3'}));
+    websocket.send(JSON.stringify({'pushed':'true', 'button' : '2'}));
 }
 
 function onToggle4(event) {
-    websocket.send(JSON.stringify({'action':'toggle', 'button' : '4'}));
+    websocket.send(JSON.stringify({'pushed':'true', 'button' : '3'}));
 }
 
 function onToggle5(event) {
-    websocket.send(JSON.stringify({'action':'toggle', 'button' : '5'}));
+    websocket.send(JSON.stringify({'pushed':'true', 'button' : '4'}));
 }
+
+function onToggle6(event) {
+    websocket.send(JSON.stringify({'pushed':'true', 'button' : '5'}));
+}
+
+$( function() {
+    var $winHeight = $( window ).height()
+    $( '.container' ).height( $winHeight );
+  });

@@ -1,30 +1,37 @@
-<!DOCTYPE HTML><html>
+<!DOCTYPE HTML>
+<html>
+
 <head>
-  <title>Control de cambios via WiFi - Maqueta AMBA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="index.css">
-  <script src="index.js"></script>
+	<title>Control de cambios via WiFi - Maqueta AMBA</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="index.css">
+	<script src="index.js"></script>
 </head>
+
 <body>
-  <h2>Control de cambios via WiFi - Maqueta AMBA</h2><h2></h2>
-  <h4>Cambio Via 4 <-> Via 1 <span id=outputState></span></h4>
-  <label class=switch><input type=checkbox onchange=onToggle1(this) id=switch1 %STATE1%>
-  <span class=slider></span></label>
-  
-  <h4>Cambio Via 2 <> Via 1 <span id=outputState></span></h4>
-  <label class=switch><input type=checkbox onchange=onToggle2(this) id=switch2 %STATE2%>
-  <span class=slider></span></label>
-  
-  <h4>Cambio Via 2 <-> Via 3 <span id=outputState></span></h4>
-  <label class=switch><input type=checkbox onchange=onToggle3(this) id=switch3 %STATE3%>
-  <span class=slider></span></label>
-  
-  <h4>Cambio Via 3 <-> Via Muerta <span id=outputState></span></h4>
-  <label class=switch><input type=checkbox onchange=onToggle4(this) id=switch4 %STATE4%>
-  <span class=slider></span></label>
-  
-  <h4>Cambio Via 3 <-> Via 3 Viaducto <span id=outputState></span></h4>
-  <label class=switch><input type=checkbox onchange=onToggle5(this) id=switch5 %STATE5%>
-  <span class=slider></span></label>
+	<div class="animate-charcter">
+		<h2>Control de cambios via WiFi - Maqueta AMBA</h2>
+	</div>
+
+		<h4 class="cambio0">Cambio Simple Via 1 - Via 4 </h4> 
+		<button id="0" class="button" onclick="onToggle1(this)">CAMBIO 1</button>
+
+		<h4 class="cambio0">Cambio Doble Via 1 - Via 2</h4>
+		<button id="1" class="button" onclick="onToggle2(this)">CAMBIO 2</button>
+
+		<h4 class="cambio0">Cambio Doble Via 2 - Via 3</h4>
+		<button id="2" class="button" onclick="onToggle3(this)">CAMBIO 3</button>
+
+		<h4 class="cambio0">Cambio Via 3 - Via Muerta</h4>
+		<button id="3" class="button" onclick="onToggle4(this)">CAMBIO 4</button>
+
+		<h4 class="cambio0">Cambio Via 1 - Via 1 Auxiliar</h4>
+		<button id="4" class="button" onclick="onToggle5(this)">CAMBIO 5</button>
+		
+		<h4 class="cambio0">Cambio Via 3 - Via 3 Estacion Principal</h4>
+		<button id="5" class="button" onclick="onToggle6(this)">CAMBIO 6</button>
+		
+		
 </body>
+
 </html>
